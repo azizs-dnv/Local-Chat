@@ -1,0 +1,30 @@
+# Node.js dependencies and logs
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Python virtual environments, caches, and build outputs
+**/.venv/
+**/venv/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+**/build/
+**/dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Runtime uploads and local data (keep the empty directory in Git)
+/uploads/*
+!/uploads/.gitkeep
+
+# Local configuration and operating-system/editor files
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

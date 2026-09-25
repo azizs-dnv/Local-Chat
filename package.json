@@ -1,0 +1,21 @@
+{
+  "name": "lan-chat",
+  "version": "1.0.0",
+  "description": "Private LAN chat and file sharing with an optional desktop admin GUI",
+  "main": "server.js",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/azizs-dnv/Local-Chat.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "ws": "^8.18.0"
+  }
+}
