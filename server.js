@@ -11,6 +11,42 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const MAX_FILE_SIZE = 100 * 1024 * 1024 * 1024; // 100 GB
+const MIME_TYPES = {
+  '.7z': 'application/x-7z-compressed',
+  '.apk': 'application/vnd.android.package-archive',
+  '.avi': 'video/x-msvideo',
+  '.css': 'text/css; charset=utf-8',
+  '.csv': 'text/csv; charset=utf-8',
+  '.doc': 'application/msword',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.exe': 'application/vnd.microsoft.portable-executable',
+  '.gif': 'image/gif',
+  '.html': 'text/html; charset=utf-8',
+  '.ico': 'image/x-icon',
+  '.jpeg': 'image/jpeg',
+  '.jpg': 'image/jpeg',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json',
+  '.m4a': 'audio/mp4',
+  '.mkv': 'video/x-matroska',
+  '.mov': 'video/quicktime',
+  '.mp3': 'audio/mpeg',
+  '.mp4': 'video/mp4',
+  '.pdf': 'application/pdf',
+  '.png': 'image/png',
+  '.ppt': 'application/vnd.ms-powerpoint',
+  '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  '.rar': 'application/vnd.rar',
+  '.svg': 'image/svg+xml',
+  '.txt': 'text/plain; charset=utf-8',
+  '.wav': 'audio/wav',
+  '.webm': 'video/webm',
+  '.webp': 'image/webp',
+  '.woff2': 'font/woff2',
+  '.xls': 'application/vnd.ms-excel',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.zip': 'application/zip',
+};
 
 // Ensure upload directory exists
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -217,8 +253,12 @@ function handleDownload(req, res, url) {
   }
 
   const stat = fs.statSync(filePath);
-  const encodedName = encodeURIComponent(fileInfo.name).replace(/%20/g, '+');
-  const disposition = `attachment; filename*=UTF-8''${encodedName}`;
+  const encodedName = encodeURIComponent(fileInfo.name).replace(/[!'()*]/g, (char) =>
+    `%${char.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+  const fallbackName = fileInfo.name.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '\\$&');
+  const disposition = `attachment; filename="${fallbackName || 'download'}"; filename*=UTF-8''${encodedName}`;
+  const contentType = MIME_TYPES[path.extname(fileInfo.name).toLowerCase()] || 'application/octet-stream';
 
   // Range requests (resume / parallel download)
   const range = req.headers.range;
@@ -231,15 +271,17 @@ function handleDownload(req, res, url) {
       'Content-Range': `bytes ${start}-${end}/${stat.size}`,
       'Accept-Ranges': 'bytes',
       'Content-Length': end - start + 1,
-      'Content-Type': 'application/octet-stream',
+      'Content-Type': contentType,
       'Content-Disposition': disposition,
+      'X-Content-Type-Options': 'nosniff',
     });
     fs.createReadStream(filePath, { start, end }).pipe(res);
   } else {
     res.writeHead(200, {
       'Content-Length': stat.size,
-      'Content-Type': 'application/octet-stream',
+      'Content-Type': contentType,
       'Content-Disposition': disposition,
+      'X-Content-Type-Options': 'nosniff',
       'Accept-Ranges': 'bytes',
     });
     fs.createReadStream(filePath).pipe(res);
@@ -283,26 +325,13 @@ function serveStatic(req, res, url) {
     return res.end('Forbidden');
   }
 
-  const mimeTypes = {
-    '.html': 'text/html; charset=utf-8',
-    '.js': 'text/javascript; charset=utf-8',
-    '.css': 'text/css; charset=utf-8',
-    '.json': 'application/json',
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.gif': 'image/gif',
-    '.svg': 'image/svg+xml',
-    '.ico': 'image/x-icon',
-    '.woff2': 'font/woff2',
-  };
-
   fs.readFile(filePath, (err, data) => {
     if (err) {
       res.writeHead(404);
       return res.end('Not Found');
     }
     const ext = path.extname(filePath);
-    res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'application/octet-stream' });
+    res.writeHead(200, { 'Content-Type': MIME_TYPES[ext.toLowerCase()] || 'application/octet-stream' });
     res.end(data);
   });
 }
